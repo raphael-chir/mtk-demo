@@ -3,7 +3,7 @@
 ![Maintainer](https://img.shields.io/badge/maintainer-raphael.chir@gmail.com-blue)
 # Migrate from Oracle to Enterprise Postgres Advanced Server
 ## Components
-- Oracle XE 21
+- Oracle XE 21 (https://www.oracle.com/database/technologies/xe-downloads.html) (copy the RPM into the project root)
 - EPAS 17
 - Migration Toolkit
 
