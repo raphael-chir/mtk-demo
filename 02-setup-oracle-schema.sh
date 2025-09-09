@@ -14,7 +14,7 @@ SCHEMA_USER="demo"
 SCHEMA_PASS="demo"
 DPUMP_DIR="/dpdump"
 DDL_DIR="/vagrant"
-DUMP_SRC="$DDL_DIR/demo_schema_data.dmp"
+DUMP_SRC="$DDL_DIR/demo_schema.dmp"
 DIR_NAME="dpump_dir"
 
 # Set Oracle environment

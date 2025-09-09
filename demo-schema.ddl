@@ -97,6 +97,30 @@ BEGIN
 END;
 /
 
+-- =================
+-- Table ratings
+-- =================
+CREATE TABLE ratings (
+    rating_id   NUMBER PRIMARY KEY,
+    customer_id NUMBER NOT NULL,
+    product_id  NUMBER NOT NULL,
+    rating      NUMBER(1),
+    review      VARCHAR2(500),
+    rating_date DATE DEFAULT SYSDATE
+);
+
+CREATE SEQUENCE ratings_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER trg_ratings_pk
+BEFORE INSERT ON ratings
+FOR EACH ROW
+BEGIN
+    IF :NEW.rating_id IS NULL THEN
+        SELECT ratings_seq.NEXTVAL INTO :NEW.rating_id FROM dual;
+    END IF;
+END;
+/
+
 -- ============================================
 -- Foreign keys via ALTER TABLE
 -- ============================================
@@ -111,6 +135,17 @@ ALTER TABLE order_lines
 
 ALTER TABLE order_lines
     ADD CONSTRAINT fk_order_lines_products
+    FOREIGN KEY (product_id) REFERENCES products(product_id);
+
+ALTER TABLE ratings 
+    ADD CONSTRAINT chk_rating CHECK (rating BETWEEN 1 AND 5);
+
+ALTER TABLE ratings 
+    ADD CONSTRAINT fk_ratings_customer 
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id);
+
+ALTER TABLE ratings 
+    ADD CONSTRAINT fk_ratings_product 
     FOREIGN KEY (product_id) REFERENCES products(product_id);
 
 -- ============================================
@@ -145,6 +180,15 @@ CREATE INDEX idx_order_lines_product_id
 CREATE INDEX idx_order_lines_order_product 
     ON order_lines(order_id, product_id);
 
+-- Ratings
+CREATE INDEX idx_ratings_customer 
+    ON ratings(customer_id);
+
+CREATE INDEX idx_ratings_product 
+    ON ratings(product_id);
+
+CREATE INDEX idx_ratings_date 
+    ON ratings(rating_date);
 
 -- ============================================
 -- Procedure : Report orders summary by customer via DBMS_OUTPUT 
