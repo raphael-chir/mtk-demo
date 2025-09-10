@@ -82,9 +82,11 @@ Grant succeeded.
 SQL> exit
 ```
 Then dump your data
-```xpdp demo/demo@localhost/XEPDB1   DIRECTORY=dpump_dir   DUMPFILE=demo_schema.dmp   LOGFILE=demo_schema.log   SCHEMAS=demo
-
-Export: Release 21.0.0.0.0 - Production on Mon Sep 8 16:13:27 2025
+```
+expdp demo/demo@localhost/XEPDB1   DIRECTORY=dpump_dir   DUMPFILE=demo_schema.dmp   LOGFILE=demo_schema.log   SCHEMAS=demo
+```
+```
+Export: Release 21.0.0.0.0 - Production on Tue Sep 9 23:27:03 2025
 Version 21.3.0.0.0
 
 Copyright (c) 1982, 2021, Oracle and/or its affiliates.  All rights reserved.
@@ -107,15 +109,16 @@ Processing object type SCHEMA_EXPORT/TABLE/INDEX/INDEX
 Processing object type SCHEMA_EXPORT/TABLE/CONSTRAINT/CONSTRAINT
 Processing object type SCHEMA_EXPORT/TABLE/CONSTRAINT/REF_CONSTRAINT
 Processing object type SCHEMA_EXPORT/TABLE/TRIGGER
-. . exported "DEMO"."CUSTOMERS"                          12.02 KB     101 rows
-. . exported "DEMO"."ORDERS"                             148.9 KB     295 rows
-. . exported "DEMO"."ORDER_LINES"                        25.71 KB     883 rows
-. . exported "DEMO"."PRODUCTS"                           32.96 KB      65 rows
+. . exported "DEMO"."ORDERS"                             13.51 MB   28716 rows
+. . exported "DEMO"."PRODUCTS"                           2.979 MB    7000 rows
+. . exported "DEMO"."ORDER_LINES"                        2.022 MB   81591 rows
+. . exported "DEMO"."CUSTOMERS"                          1.336 MB   25437 rows
+. . exported "DEMO"."RATINGS"                            9.436 MB   97142 rows
 Master table "DEMO"."SYS_EXPORT_SCHEMA_01" successfully loaded/unloaded
 ******************************************************************************
 Dump file set for DEMO.SYS_EXPORT_SCHEMA_01 is:
   /dpdump/demo_schema.dmp
-Job "DEMO"."SYS_EXPORT_SCHEMA_01" successfully completed at Mon Sep 8 16:13:54 2025 elapsed 0 00:00:26
+Job "DEMO"."SYS_EXPORT_SCHEMA_01" successfully completed at Tue Sep 9 23:27:31 2025 elapsed 0 00:00:26
 ```
 ## Oracle vs PostgreSQL tools 
 
@@ -132,9 +135,3 @@ Job "DEMO"."SYS_EXPORT_SCHEMA_01" successfully completed at Mon Sep 8 16:13:54 2
 | **Exécuter un script SQL**              | `@script.sql`                                                                        | `\i script.sql`                                                                   |
 | **Voir les objets dans un schéma**      | `SELECT object_name, object_type FROM all_objects WHERE owner='SCHEMA';`             | `\dt schema.*` (tables) <br>`\dv schema.*` (views) <br>`\df schema.*` (functions) |
 | **Quitter l’outil**                     | `EXIT;`                                                                              | `\q`                                                                              |
-
-
-@/vagrant/datagen/customers.sql
-@/vagrant/datagen/customers.sql
-@/vagrant/datagen/orders.sql
-@/vagrant/datagen/order_lines.sql
