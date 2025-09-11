@@ -1,0 +1,76 @@
+cells:
+  - kind: 1
+    value: >-
+      # ORACLE Demo 
+
+      This notebook gives an insight of this model. See
+      [ddl](demo-schema.ddl.sql)
+
+
+
+      ```text
+
+
+      +-----------+                                +-----------+
+
+      | CUSTOMERS |------------------------------->|  RATINGS  |
+
+      +-----------+                                +-----------+
+            |                                         ^
+            |                                         |
+            v                                         |
+      +-----------+        +--------------+        +-----------+
+
+      |  ORDERS   |------->| ORDER_LINES  |<-------| PRODUCTS  |
+
+      +-----------+        +--------------+        +-----------+
+
+      ```
+    languageId: markdown
+  - kind: 1
+    value: "## Tables rows count and size"
+    languageId: markdown
+  - kind: 2
+    value: >
+      SELECT 
+          t.table_name,
+          t.num_rows AS estimated_rows,
+          ROUND(s.bytes/1024/1024,2) AS size_mb
+      FROM user_tables t
+
+      JOIN user_segments s ON t.table_name = s.segment_name
+
+      WHERE t.table_name IN
+      ('CUSTOMERS','PRODUCTS','ORDERS','ORDER_LINES','RATINGS')
+
+      ORDER BY size_mb DESC;
+    languageId: oracle-sql
+  - kind: 1
+    value: "## Tables content"
+    languageId: markdown
+  - kind: 2
+    value: |
+      SELECT * FROM CUSTOMERS FETCH FIRST 15 ROWS ONLY;
+
+      SELECT * FROM PRODUCTS FETCH FIRST 3 ROWS ONLY;
+
+      SELECT * FROM ORDERS FETCH FIRST 3 ROWS ONLY;
+
+      SELECT * FROM ORDER_LINES FETCH FIRST 15 ROWS ONLY;
+
+      SELECT * FROM RATINGS FETCH FIRST 5 ROWS ONLY;
+    languageId: oracle-sql
+  - kind: 1
+    value: "## Function execution"
+    languageId: markdown
+  - kind: 2
+    value: |
+      SELECT get_customer_total(4755) AS total_spent
+      FROM dual;
+    languageId: oracle-sql
+  - kind: 1
+    value: "## Procedure execution"
+    languageId: markdown
+  - kind: 2
+    value: EXEC get_all_orders_activity_log(4755);
+    languageId: oracle-sql

@@ -93,68 +93,63 @@ MTK has automatically generated a schema with compatible data types. Let's impor
 
 ### 3 - Test schema and data import into EPAS
 ```
-psql -h localhost -p 5444 -U dba -d postgres
+psql -h localhost -p 5444 -U dba -d edb
+```
+Set demo schema in search_path on database level.
+```
+alter database edb set search_path='demo';
 ```
 Then :
 ```
 \i /vagrant/mtk-generated/mtk_demo_ddl.sql;
 ```
 ```
-\copy demo.customers FROM '/vagrant/mtk-generated/mtk_demo_customers_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
+\copy customers FROM '/vagrant/mtk-generated/mtk_demo_customers_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
 ```
 ```
-\copy demo.products FROM '/vagrant/mtk-generated/mtk_demo_products_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
+\copy products FROM '/vagrant/mtk-generated/mtk_demo_products_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
 ```
 Data related with a table containing a CLOB column type can't be migrate with COPY.
 ```
 \i /vagrant/mtk-generated/mtk_demo_orders_data.sql; 
 ```
 ```
-\copy demo.order_lines FROM '/vagrant/mtk-generated/mtk_demo_order_lines_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
+\copy order_lines FROM '/vagrant/mtk-generated/mtk_demo_order_lines_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
 ```
 ```
-\copy demo.ratings FROM '/vagrant/mtk-generated/mtk_demo_ratings_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
+\copy ratings FROM '/vagrant/mtk-generated/mtk_demo_ratings_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
 ```
 Explore the different table structure and associate data
 
 #### 4 - Test sequences and triggers
 ```
-postgres=# INSERT INTO customers (last_name, first_name, email, signup_date) VALUES ('Chir', 'Raphael', 'raphael.chir@example.com', DATE '2025-01-15');
+INSERT INTO customers (last_name, first_name, email, signup_date) VALUES ('Chir', 'Raphael', 'raphael.chir@example.com', DATE '2025-01-15');
 INSERT 0 1
 ```
 ```
-postgres=# select * from customers where last_name = 'Chir';
- customer_id | last_name | first_name |          email           |    signup_date     
--------------+-----------+------------+--------------------------+--------------------
-         102 | Chir      | Raphael    | raphael.chir@example.com | 15-JAN-25 00:00:00
-(1 row)
-
+select * from customers where last_name = 'Chir';
 ```
 #### 5 - Test indexes
 ```
-postgres=# \di
+\di
 ```
 
 #### 6 - Test functions 
 Check functions (func & proc types)
 ```
-postgres=# \df
+\df
 ```
 Important ! At this stage we have noticed that an incompatibility had been raised by migration portal, but MTK hasn't log it !
 Let's test
 ```
-postgres=# select get_customer_total(6);
- get_customer_total 
---------------------
-            1204.36
-(1 row)
+select get_customer_total(4755);
 ```
 ```
-postgres=# CALL demo.report_orders_summary();
+call report_orders_summary();
 ```
 And ... 
 ```
-postgres=# CALL demo.get_all_orders_activity_log(123);
+postgres=# CALL get_all_orders_activity_log(4755);
 ERROR:  procedure dbms_lob.createtemporary(clob, boolean) does not exist
 LINE 1: EXEC DBMS_LOB.CREATETEMPORARY(v_notes, TRUE)
         ^
@@ -167,7 +162,7 @@ No magic system here we must rewrite it a little ...
 
 #### 7 - Test quick procedure rewriting
 ```sql
-postgres=# CREATE OR REPLACE PROCEDURE get_all_orders_activity_log(p_customer_id NUMBER) IS
+CREATE OR REPLACE PROCEDURE get_all_orders_activity_log(p_customer_id NUMBER) IS
   v_notes CLOB := EMPTY_CLOB();
 BEGIN
   -- Loop through orders with activity logs
@@ -186,26 +181,7 @@ BEGIN
 END;
 /
 ```
-Then
-```
-postgres=# CALL demo.get_all_orders_activity_log(4);
-All orders activity_log for customer 4 :
-2025-09-06 11:51:19 - Added product 62 x1
-2025-09-04 14:08:21 - Added product 51 x1
-2025-09-04 11:19:22 - Added product 47 x3
-2025-09-01 08:03:44 - Added product 9 x1
-2025-09-08 02:17:53 - Order processed
-2025-09-08 01:02:22 - Shipped via UPS
-2025-09-08 13:22:23 - Delivered
-
-2025-09-04 10:32:03 - Added product 49 x3
-2025-09-07 14:45:12 - Added product 33 x3
-2025-09-05 17:15:43 - Added product 44 x3
-2025-08-31 20:07:51 - Added product 59 x1
-2025-09-08 08:22:56 - Order processed
-2025-09-08 02:51:34 - Shipped via UPS
-2025-09-08 13:22:23 - Delivered
-```
+Check that it works now.
 
 ### B - Online migration tests
 
@@ -214,10 +190,7 @@ We can make the migration at once with this command :
 ```
 sudo ./runMTK.sh -dropSchema true DEMO
 ``` 
-See the report log, i.e:
-```
-sudo less /root/.enterprisedb/migration-toolkit/logs/mtk_DEMO_20250910100903.log
-```
+See the report log in /root/.enterprisedb/migration-toolkit/logs/ folder
 
 #### 2 - Test Parallelism Migration optimization
 
@@ -225,60 +198,49 @@ Table migrable with COPY and INSERT mode can take benefit of multi threads paral
 ```
 sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 5000 -tableLoaderLimit 4 DEMO
 ``` 
--loaderCount : is the number of parallel threads (1 thread -> 1 core). For the demo I use a 2CPU for a total of 4 cores  so I set 4 threads  
--parallelLoadRowLimit : Is the number of rows handled by a thread. Default is 100000, so adjust it to take benefit of parallelism  
--tableLoaderLimit adjust the max number of threads use on a table, can equilibrate the load
+**-loaderCount** : The number of parallel threads (1 thread -> 1 core). *For the demo I use a 2CPU for a total of 4 cores so 4 threads*  
+**-parallelLoadRowLimit** : The number of rows fetched from Oracle that trigger parallelism load ito EPAS. *Default is 100000, so adjust it to take benefit of parallelism*  
+**-tableLoaderLimit** adjust the max number of threads use on a table to equilibrate the load
 
-TIPS : 
--fastCopy is an option that deactivate wal to accelerate migration. But you can't used PITR if migration failed at a certain point
+Notes :   
+**-fastCopy** is an option that deactivate wal to accelerate migration. But you can't used PITR if migration failed at a certain point
 
 #### 3 - Test Migration Strategy optimization
-You can create a script to separate migration from tables containing CLOB and table migrable with COPY mode with the specific options described above
+A best practice is to create a script to separate migration 
+using INSERT mode and using COPY mode because specific options are available :
 
 | **Context / Options MTK**                                 | **Mode**               | **Description**                                                                           |
 | --------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------- |
-| `-offlineMigration -dataOnly` without `-safeMode`         | **COPY**               | Utilisation de fichiers `.cpy`, insertion en bloc. C'est le mode par défaut.              |
-| `-offlineMigration -dataOnly -safeMode`                   | **INSERT** (plain SQL) | Fichiers SQL générés avec INSERT, ligne par ligne, chaque ligne est commitée à part.      |
-| Vérification automatique du mode suite à une interruption | **COPY**               | En cas de reprise après interruption, continue le COPY depuis la ligne échouée ([EDB][1]) |
-| `-fastCopy` utilisé (option complémentaire)               | Toujours **COPY**      | Optimise le COPY en contournant le WAL, mais nécessite un environnement compatible.       |
+| `-offlineMigration -dataOnly` without `-safeMode`         | **COPY**               | Default mode for `.cpy` bloc insertion.              |
+| `-offlineMigration -dataOnly -safeMode`                   | **INSERT** (plain SQL) | Each line is commited      |
+| Automatic check when interuption occured | **COPY**               | When ok COPY from failed row insertion restart ([EDB][1]) |
+| `-fastCopy` utilisé (option complémentaire)               | Toujours **COPY**      | COPY optimization without WAL writing.       |
 | `-cpBatchSize` utilisé (option complémentaire)            | **COPY**               | Specify the batch size in MB to use in the COPY command. Any value greater than 0 is valid. The default batch size is 8MB.
 | `-batchSize` utilisé (option complémentaire)              | **INSERT**             | Specify the batch size of bulk inserts. Valid values are 1 to 1000. The default batch size is 1000. Reduce the value of -batchSize if Out of Memory exceptions occur.                                        |
-| `-lobBatchSize` utilisé (option complémentaire)           | **INSERT** (Oracle)    | Specify the number of rows to load in a batch for LOB data types. The data migration for a table containing a large object type (LOB) column, such as BYTEA, BLOB, or CLOB, is performed one row at a time by default. This is to avoid an out-of-heap-space error in case an individual LOB column holds hundreds of megabytes of data. In case the LOB column average data size is at a lower end, you can customize the LOB batch size by specifying the number of rows in each batch with any value greater than 0.d’inserts).                                          |
+| `-lobBatchSize` utilisé (option complémentaire)           | **INSERT** (Oracle)    | Optimize the batch size to load. Specify the number of rows to load in a batch for LOB data types. The data migration for a table containing a large object type (LOB) column, such as BYTEA, BLOB, or CLOB, is performed one row at a time by default. This is to avoid an out-of-heap-space error in case an individual LOB column holds hundreds of megabytes of data. In case the LOB column average data size is at a lower end, you can customize the LOB batch size by specifying the number of rows in each batch with any value greater than 0.d’inserts).                                          |
 
 [1]: https://www.enterprisedb.com/docs/migration_toolkit/latest/07_invoking_mtk/08_mtk_command_options/ "Migration Toolkit command options v55 - EnterpriseDB"
 
--cpBatchSize optimise la taille du lot à ecrire
+Note :   
+**-fetchSize** :  
+- Read, extract from source database
+- Control how many rows JDBC driver are extracted for each call
+- Run before MTK starts to load data 
+- Warning : If the value is too high an OutOfMemory error could occur.  
 
--parallelLoadRowLimit décide si la table peut être chargée en plusieurs threads en parallèle  
-
-Note -fetchSize : lecture depuis la source
-
-Objectif : contrôle combien de lignes le driver JDBC récupère depuis la base source à chaque appel.
-
-Fonctionne avant même que MTK commence à charger les données dans PostgreSQL/EDB.
-
-Si trop grand : MTK charge trop de lignes en mémoire à la fois → OutOfMemory.  
+We choose to create 3 groups of data migration, and we add a 4th for migrate remaining schema object
 
 #### Group 1 - CUSTOMERS,PRODUCTS,RATINGS table creation and data copy. Try to optimize
 ```
 sudo ./runMTK.sh -dropSchema true -tables "CUSTOMERS,PRODUCTS,RATINGS" DEMO
 ```
-or
+and
 ```
 sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 5000 -tableLoaderLimit 2 -cpBatchSize 4 -fetchSize 1000 -tables "CUSTOMERS,PRODUCTS,RATINGS" DEMO
 ``` 
-Note that nothing else except TABLES DDL are created.
+Note that nothing else except the related TABLES DDL are created.
 ```
-[vagrant@mtk-epas bin]$ psql -h localhost -p 5444 -U dba -d edb -c "\dt demo.*"
-Password for user dba: 
-         List of relations
- Schema |   Name    | Type  | Owner 
---------+-----------+-------+-------
- demo   | customers | table | dba
- demo   | products  | table | dba
- demo   | ratings   | table | dba
-(3 rows)
-
+psql -h localhost -p 5444 -U dba -d edb -c "\dt"
 ```
 
 #### Group 2 - ORDERS : contain CLOB so INSERT mode
@@ -295,28 +257,27 @@ sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 20000 -ta
 sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 30000 -tableLoaderLimit 2 -cpBatchSize 16 -fetchSize 40000 -tables "ORDER_LINES" DEMO
 ```
 
-#### Script creation
+#### Group 4 - Migrate remaining DDL objects
 
-Take the best performance command for each group and add options for constraints, indexes and triggers. Then complete the script with sequences, proc and functions
+Don't run it here because it depends on all previous ddl objects creation (as we run mtk with -dropSchema true).
 ```
-sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 5000 -tableLoaderLimit 2 -cpBatchSize 4 -fetchSize 1000 -tables "CUSTOMERS,PRODUCTS,RATINGS" -constraints -indexes -triggers  DEMO
-
-
-sudo ./runMTK.sh -dropSchema false -loaderCount 4 -parallelLoadRowLimit 20000 -tableLoaderLimit 4 -batchSize 8 -lobBatchSize 1000  -tables "ORDERS" -constraints -indexes -triggers DEMO
-
-sudo ./runMTK.sh -dropSchema false -loaderCount 4 -parallelLoadRowLimit 30000 -tableLoaderLimit 2 -cpBatchSize 16 -fetchSize 40000 -tables "ORDER_LINES" -constraints -indexes -triggers DEMO
-
 sudo ./runMTK.sh -dropSchema false -allSequences -allProcs -allFuncs DEMO
 ```
-Execute the script that includes the command above, it is naned "migration.sh" : 
+
+#### Script creation
+
+Take the best performance command for each group and add options for constraints, indexes and triggers. Then complete the script with sequences, proc and functions.  
+See the final script : See [migrate.sh](migrate.sh)
+
 ```
 . /vagrant/migrate.sh
 ``` 
-The execution time has been reduced to 64%
+
+Important : The execution time has been reduced to 64% !
 
 Check that everything's alright
 ```
-psql -h localhost -p 5444 -U dba -d edb -c "set search_path=demo;CALL demo.report_orders_summary();"
+psql -h localhost -p 5444 -U dba -d edb -c "call report_orders_summary();"
 ```
 
 Enjoy your Oracle to EPAS migration ...
