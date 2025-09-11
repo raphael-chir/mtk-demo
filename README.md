@@ -89,6 +89,7 @@ In this tests section we will demonstrate :
 - Automatic indexes conversion
 - Compatible Functions and Procedures portability
 - Handling an incompatibility identified in Migration Portal
+- Custom column type mapping
 ---
 #### 1 - Test environment
 We can install MTK on a separate server but for the demo purpose it is installed on the target EPAS VM. 
