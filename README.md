@@ -2,6 +2,32 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/Naereen/StrapDown.js/graphs/commit-activity)
 ![Maintainer](https://img.shields.io/badge/maintainer-raphael.chir@gmail.com-blue)
 # Migrate from Oracle to Enterprise Postgres Advanced Server
+## Sommaire
+
+- [Components](#components)
+- [Goal](#goal)
+- [EDB Repository Token](#edb-repository-token)
+- [Start](#start)
+- [Migration assessment](#migration-assessment)
+- [Migration Toolkit (MTK)](#migration-toolkit-mtk)
+  - [A - Offline migration tests](#a---offline-migration-tests)
+    - [1 - Test environment](#1---test-environment)
+    - [2 - Test offline migration with compatible schema and data generation](#2---test-offline-migration-with-compatible-schema-and-data-generation)
+    - [3 - Test schema and data import into EPAS](#3---test-schema-and-data-import-into-epas)
+    - [4 - Test sequences and triggers](#4---test-sequences-and-triggers)
+    - [5 - Test indexes](#5---test-indexes)
+    - [6 - Test functions](#6---test-functions)
+    - [7 - Test quick procedure rewriting](#7---test-quick-procedure-rewriting)
+  - [B - Online migration tests](#b---online-migration-tests)
+    - [1 - Migration at once without optimization](#1---migration-at-once-without-optimization)
+    - [2 - Test Parallelism Migration optimization](#2---test-parallelism-migration-optimization)
+    - [3 - Test Migration Strategy optimization](#3---test-migration-strategy-optimization)
+      - [Group 1 - CUSTOMERS,PRODUCTS,RATINGS table creation and data copy](#group-1---customersproductsratings-table-creation-and-data-copy)
+      - [Group 2 - ORDERS : contain CLOB so INSERT mode](#group-2---orders--contain-clob-so-insert-mode)
+      - [Group 3 - ORDER_LINES : table creation and data copy](#group-3---order_lines--table-creation-and-data-copy)
+      - [Group 4 - Migrate remaining DDL objects](#group-4---migrate-remaining-ddl-objects)
+      - [Script creation](#script-creation)
+
 ## Components
 - Oracle XE 21 (https://www.oracle.com/database/technologies/xe-downloads.html) (copy the RPM into the project root)
 - EPAS 17
@@ -19,9 +45,9 @@ This means that **you can copy directly into EPAS** :
 - Index, constraints Oracle syntax
 - Advanced Oracle like (audit, partitions, request hints, ...)
 
-Because it avoids to rewrite code, **this reduce significantly** 
-- the cost of a migration
-- the risk of a failed migration
+> Because it avoids to rewrite code, **this reduce significantly** 
+> - the cost of a migration
+> - the risk of a failed migration
 
 ## EDB Repository Token
 To install EPAS you need an access to EDB Repository.   
@@ -29,26 +55,21 @@ It is free, you can go to https://www.enterprisedb.com/docs/repos/ to read how t
 Create a file named .edbtoken and past your key into it  
 
 ## Start
-We use vagrant to set up 2 VMs, one including Oracle XEM and another including Postgres Advanced 17 with MTK.
+We use vagrant to set up 2 VMs : 
+- One including Oracle XEM and 
+- Another including Postgres Advanced 17 with MTK.
 ```
 vagrant up
 ```
 ## Migration assessment
 
-The first step is to analyze the ddl of oracle database. Go to to https://www.enterprisedb.com  
-Then click on Accounts/Migration Portal to access to the assessment tool.
-You need to provide your ddl : 
-- Download edb_extractor_ddl.sql and run it 
-- Or extract with your own oracle script or tool
-Then choose the source Oracle version, the target EPAS version, fill required infos and perform assessment.
-
-Migration Portal is an analyzer tool to help you fix compatibilities issues.  
-You can also perform an dry run with Migration Toolkit (MTK), and see a report in the logs as we will see below.  
-But Migration Portal is a more strict analyzer so it is recommended to use it before ! 
+Different tools exist to assess a migration : 
+- Migration Portal (GUI that help you to fix compatibilities issues)
+- MTK report in log section incompatibilities
+- **EDB Professional Services** are specialized in Oracle migration to EPAS for 20 years and have internal performant tools to help you accelerate and finalize a migration with success. 
 
 ## Migration Toolkit (MTK)
-MTK is a java program whick comes with a lot of options to implement the design of your migration.  
-
+MTK is a java program which comes with a lot of options to implement the design of your migration.  
 ### A - Offline migration tests
 In this tests section we will demonstrate :  
 - Automatic column type conversion
@@ -56,7 +77,7 @@ In this tests section we will demonstrate :
 - Automatic indexes conversion
 - Compatible Functions and Procedures portability
 - Handling an incompatibility identified in Migration Portal
-
+---
 #### 1 - Test environment
 We can install MTK on a separate server but for the demo purpose it is installed on the target EPAS VM. 
 SSH into the EPAS VM.
@@ -84,6 +105,7 @@ TARGET_DB_USER=dba
 TARGET_DB_PASSWORD=dba
 [vagrant@mtk-epas /]$ 
 ```
+---
 #### 2 - Test offline migration with compatible schema and data generation
 Perform an offline migration, go to /usr/edb/migration-toolkit/bin directory
 ```
@@ -91,7 +113,8 @@ sudo ./runMTK.sh -offlineMigration /vagrant/mtk-generated/  DEMO
 ```
 MTK has automatically generated a schema with compatible data types. Let's import the schema and the data.
 
-### 3 - Test schema and data import into EPAS
+---
+#### 3 - Test schema and data import into EPAS
 ```
 psql -h localhost -p 5444 -U dba -d edb
 ```
@@ -109,7 +132,8 @@ Then :
 ```
 \copy products FROM '/vagrant/mtk-generated/mtk_demo_products_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
 ```
-Data related with a table containing a CLOB column type can't be migrate with COPY.
+
+**WARN** : *Data related with a table containing a CLOB column type can't be migrate with COPY.*
 ```
 \i /vagrant/mtk-generated/mtk_demo_orders_data.sql; 
 ```
@@ -119,8 +143,7 @@ Data related with a table containing a CLOB column type can't be migrate with CO
 ```
 \copy ratings FROM '/vagrant/mtk-generated/mtk_demo_ratings_data.cpy' WITH (FORMAT text, DELIMITER E'\t', NULL '\N');
 ```
-Explore the different table structure and associate data
-
+---
 #### 4 - Test sequences and triggers
 ```
 INSERT INTO customers (last_name, first_name, email, signup_date) VALUES ('Chir', 'Raphael', 'raphael.chir@example.com', DATE '2025-01-15');
@@ -129,17 +152,18 @@ INSERT 0 1
 ```
 select * from customers where last_name = 'Chir';
 ```
+---
 #### 5 - Test indexes
 ```
 \di
 ```
-
+---
 #### 6 - Test functions 
 Check functions (func & proc types)
 ```
 \df
 ```
-Important ! At this stage we have noticed that an incompatibility had been raised by migration portal, but MTK hasn't log it !
+**Important** : At this stage we have noticed that an incompatibility had been raised by migration portal, but MTK hasn't log it !
 Let's test
 ```
 select get_customer_total(4755);
@@ -158,8 +182,9 @@ QUERY:  EXEC DBMS_LOB.CREATETEMPORARY(v_notes, TRUE)
 CONTEXT:  edb-spl function get_all_orders_activity_log(numeric) line 4 at procedure/function invocation statement
 ```
 Remember this incompatibility had been raised by Migration Portal.
-No magic system here we must rewrite it a little ... 
+No magic system here we must rewrite it a little ...  
 
+---
 #### 7 - Test quick procedure rewriting
 ```sql
 CREATE OR REPLACE PROCEDURE get_all_orders_activity_log(p_customer_id NUMBER) IS
@@ -183,6 +208,7 @@ END;
 ```
 Check that it works now.
 
+---
 ### B - Online migration tests
 
 #### 1 - Migration at once without optimization
@@ -192,6 +218,7 @@ sudo ./runMTK.sh -dropSchema true DEMO
 ``` 
 See the report log in /root/.enterprisedb/migration-toolkit/logs/ folder
 
+---
 #### 2 - Test Parallelism Migration optimization
 
 Table migrable with COPY and INSERT mode can take benefit of multi threads parallelism :
@@ -205,6 +232,7 @@ sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 5000 -tab
 Notes :   
 **-fastCopy** is an option that deactivate wal to accelerate migration. But you can't used PITR if migration failed at a certain point
 
+---
 #### 3 - Test Migration Strategy optimization
 A best practice is to create a script to separate migration 
 using INSERT mode and using COPY mode because specific options are available :
@@ -230,7 +258,7 @@ Note :
 
 We choose to create 3 groups of data migration, and we add a 4th for migrate remaining schema object
 
-#### Group 1 - CUSTOMERS,PRODUCTS,RATINGS table creation and data copy. Try to optimize
+##### Group 1 - CUSTOMERS,PRODUCTS,RATINGS table creation and data copy.
 ```
 sudo ./runMTK.sh -dropSchema true -tables "CUSTOMERS,PRODUCTS,RATINGS" DEMO
 ```
@@ -243,7 +271,7 @@ Note that nothing else except the related TABLES DDL are created.
 psql -h localhost -p 5444 -U dba -d edb -c "\dt"
 ```
 
-#### Group 2 - ORDERS : contain CLOB so INSERT mode
+##### Group 2 - ORDERS : contain CLOB so INSERT mode
 ```
 sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 20000 -tableLoaderLimit 4 -batchSize 8 -fetchSize 20000 -tables "ORDERS" DEMO
 ```
@@ -252,19 +280,19 @@ and
 sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 20000 -tableLoaderLimit 4 -batchSize 8 -lobBatchSize 1000  -tables "ORDERS" DEMO
 ```
 
-#### Group 3 - ORDER_LINES : table creation and data copy.
+##### Group 3 - ORDER_LINES : table creation and data copy.
 ```
 sudo ./runMTK.sh -dropSchema true -loaderCount 4 -parallelLoadRowLimit 30000 -tableLoaderLimit 2 -cpBatchSize 16 -fetchSize 40000 -tables "ORDER_LINES" DEMO
 ```
 
-#### Group 4 - Migrate remaining DDL objects
+##### Group 4 - Migrate remaining DDL objects
 
 Don't run it here because it depends on all previous ddl objects creation (as we run mtk with -dropSchema true).
 ```
 sudo ./runMTK.sh -dropSchema false -allSequences -allProcs -allFuncs DEMO
 ```
 
-#### Script creation
+##### Script creation
 
 Take the best performance command for each group and add options for constraints, indexes and triggers. Then complete the script with sequences, proc and functions.  
 See the final script : See [migrate.sh](migrate.sh)
