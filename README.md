@@ -29,9 +29,21 @@
       - [Script creation](#script-creation)
 
 ## Components
-- Oracle XE 21 (https://www.oracle.com/database/technologies/xe-downloads.html) (copy the RPM into the project root)
-- EPAS 17
+- Source database : **Oracle XE 21** (https://www.oracle.com/database/technologies/xe-downloads.html) (copy the RPM into the project root)
+- Destination database : **EPAS 17**
 - Migration Toolkit
+- Data model :
+
+```text
+        +-----------+                                +-----------+
+        | CUSTOMERS |------------------------------->|  RATINGS  |
+        +-----------+                                +-----------+
+              |                                         ^
+              v                                         |
+        +-----------+        +--------------+        +-----------+
+        |  ORDERS   |------->| ORDER_LINES  |<-------| PRODUCTS  |
+        +-----------+        +--------------+        +-----------+
+```
 
 ## Goal
 In this demo, we will show the EPAS compatibilities with Oracle.  
@@ -242,14 +254,13 @@ using INSERT mode and using COPY mode because specific options are available :
 | `-offlineMigration -dataOnly` without `-safeMode`         | **COPY**               | Default mode for `.cpy` bloc insertion.              |
 | `-offlineMigration -dataOnly -safeMode`                   | **INSERT** (plain SQL) | Each line is commited      |
 | Automatic check when interuption occured | **COPY**               | When ok COPY from failed row insertion restart ([EDB][1]) |
-| `-fastCopy` utilisé (option complémentaire)               | Toujours **COPY**      | COPY optimization without WAL writing.       |
-| `-cpBatchSize` utilisé (option complémentaire)            | **COPY**               | Specify the batch size in MB to use in the COPY command. Any value greater than 0 is valid. The default batch size is 8MB.
-| `-batchSize` utilisé (option complémentaire)              | **INSERT**             | Specify the batch size of bulk inserts. Valid values are 1 to 1000. The default batch size is 1000. Reduce the value of -batchSize if Out of Memory exceptions occur.                                        |
-| `-lobBatchSize` utilisé (option complémentaire)           | **INSERT** (Oracle)    | Optimize the batch size to load. Specify the number of rows to load in a batch for LOB data types. The data migration for a table containing a large object type (LOB) column, such as BYTEA, BLOB, or CLOB, is performed one row at a time by default. This is to avoid an out-of-heap-space error in case an individual LOB column holds hundreds of megabytes of data. In case the LOB column average data size is at a lower end, you can customize the LOB batch size by specifying the number of rows in each batch with any value greater than 0.d’inserts).                                          |
+| `-fastCopy`               | **COPY**      | COPY optimization without WAL writing.       |
+| `-cpBatchSize`| **COPY**               | Specify the batch size in MB to use in the COPY command. Any value greater than 0 is valid. The default batch size is 8MB.
+| `-batchSize`              | **INSERT**             | Specify the batch size of bulk inserts. Valid values are 1 to 1000. The default batch size is 1000. Reduce the value of -batchSize if Out of Memory exceptions occur.                                        |
+| `-lobBatchSize`           | **INSERT** (Oracle)    | Optimize the batch size to load. Specify the number of rows to load in a batch for LOB data types. The data migration for a table containing a large object type (LOB) column, such as BYTEA, BLOB, or CLOB, is performed one row at a time by default. This is to avoid an out-of-heap-space error in case an individual LOB column holds hundreds of megabytes of data. In case the LOB column average data size is at a lower end, you can customize the LOB batch size by specifying the number of rows in each batch with any value greater than 0.d’inserts).                                          |
 
 [1]: https://www.enterprisedb.com/docs/migration_toolkit/latest/07_invoking_mtk/08_mtk_command_options/ "Migration Toolkit command options v55 - EnterpriseDB"
 
-Note :   
 **-fetchSize** :  
 - Read, extract from source database
 - Control how many rows JDBC driver are extracted for each call
