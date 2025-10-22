@@ -1,4 +1,46 @@
 # Appendix
+## Data generation
+1 - Run the ddl script based on demo-schema.ddl.sql  
+2 - Generate plain sql script with datagen.py program   
+3 - From your Oracle instance, run the SQL data scripts separately to verify that each table dataset are correctly inserted, or you can execute directly import.sh script
+
+### DDL Schema setup
+Use datagen/demo-schema.ddl.sql. SSH into your Oracle instance and run :
+```
+sqlplus -s demo/demo@localhost/XEPDB1 @demo-schema.ddl.sql
+```
+### Generate data
+datagen.py is a Python script using Faker library.  
+First prepare your Python environment (Python3 must be installed).
+```
+python3 -m venv ~/oracle_data_env
+```
+```
+source ~/oracle_data_env/bin/activate
+```
+```
+pip install --upgrade pip
+```
+```
+pip install faker
+```
+cd into datagen directory, then execute
+```
+python3 datagen.py
+```
+This command generate 4 plain SQL files, ready to be executed on your Oracle instance. By default the number of rows for each table is defined in the beginning of the program.
+
+### SQL scripts execution
+You must respect the order of execution for each script : 
+1 - customers.sql
+2 - products.sql
+3 - ratings.sql
+4 - orders.sql (contains order_lines dataset)
+
+```
+sqlplus demo/demo@localhost/XEPDB1 @customers.sql 
+---
+
 ## Oracle User/Schema and data creation
 
 Oracle XE uses Multitenant container database (CDB). We must determine in which Pluggable database (PDB) we will create the user/schema
