@@ -40,6 +40,7 @@ You must respect the order of execution for each script :
 ```
 sqlplus demo/demo@localhost/XEPDB1 @customers.sql 
 ---
+```
 
 ## Oracle User/Schema and data creation
 
