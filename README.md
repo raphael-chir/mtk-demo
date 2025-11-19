@@ -81,7 +81,37 @@ Different tools exist to assess a migration :
 - **EDB Professional Services** are specialized in Oracle migration to EPAS for 20 years and have internal performant tools to help you accelerate and finalize a migration with success. 
 
 ## Migration Toolkit (MTK)
-MTK is a java program which comes with a lot of options to implement the design of your migration.  
+MTK is a java program which comes with a lot of options to implement the design of your migration.
+
+There are 2 kinds of configuration, in this demo we starts with /usr/edb/migrationtoolkit/etc/toolkit.properties to set source database connexion and target database connexion.  
+
+In order to avoid the usage of clear password, you can set up environment variables. (i.e in Kerberos auth you can set up this en var). To do this you must edit in /usr/edb/migrationtoolkit/bin/runMTK.sh and replace the java command call by : 
+```bash
+# ----------------------------------------------------------------------------
+# --
+# -- Copyright (c) 2004-2021 - EnterpriseDB Corporation.  All Rights Reserved.
+# --
+# ----------------------------------------------------------------------------
+
+export base="/usr/edb/migrationtoolkit"
+
+. /etc/sysconfig/edb/migrationtoolkit/edb-migrationtoolkit-55.config
+. $base/bin/runJavaApplication.sh
+
+#runJREApplication $JAVA_HEAP_SIZE -Dprop=$base/etc/toolkit.properties -cp $base/bin/edb-migrationtoolkit.jar:$base/lib/* com.edb.MigrationToolkit "$@"
+runJREApplication $JAVA_HEAP_SIZE -cp $base/bin/edb-migrationtoolkit.jar:$base/lib/* com.edb.MigrationToolkit "$@"
+
+```
+Use this environment variables with a granted runMTK.sh execution user: 
+```bash
+export SRC_DB_URL=jdbc:oracle:thin:@192.168.56.10:1521/XEPDB1
+export SRC_DB_USER=demo
+export SRC_DB_PW=demo
+export TGT_DB_URL=jdbc:edb://localhost:5444/edb
+export TGT_DB_USER=dba
+export TGT_DB_PW=dba
+```
+
 ### A - Offline migration tests
 In this tests section we will demonstrate :  
 - Automatic column type conversion
