@@ -178,3 +178,121 @@ Job "DEMO"."SYS_EXPORT_SCHEMA_01" successfully completed at Tue Sep 9 23:27:31 2
 | **Exécuter un script SQL**              | `@script.sql`                                                                        | `\i script.sql`                                                                   |
 | **Voir les objets dans un schéma**      | `SELECT object_name, object_type FROM all_objects WHERE owner='SCHEMA';`             | `\dt schema.*` (tables) <br>`\dv schema.*` (views) <br>`\df schema.*` (functions) |
 | **Quitter l’outil**                     | `EXIT;`                                                                              | `\q`                                                                              |
+
+
+## DBLinks
+Firstly, install oracle-instant-package in EPAS machine 
+
+```
+[vagrant@mtk-epas vagrant]$ sudo dnf -y localinstall /vagrant/oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm
+enterprisedb-enterprise                      696  B/s | 659  B     00:00    
+enterprisedb-enterprise-noarch               326  B/s | 659  B     00:02    
+enterprisedb-enterprise-source               723  B/s | 659  B     00:00    
+Extra Packages for Enterprise Linux 9 - x86_  67 kB/s |  12 kB     00:00    
+Dependencies resolved.
+=============================================================================
+ Package                      Arch     Version          Repository      Size
+=============================================================================
+Installing:
+ oracle-instantclient-basic   x86_64   21.12.0.0.0-1    @commandline    53 M
+
+Transaction Summary
+=============================================================================
+Install  1 Package
+
+Total size: 53 M
+Installed size: 238 M
+Downloading Packages:
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                     1/1 
+  Installing       : oracle-instantclient-basic-21.12.0.0.0-1.x86_64     1/1 
+  Running scriptlet: oracle-instantclient-basic-21.12.0.0.0-1.x86_64     1/1 
+  Verifying        : oracle-instantclient-basic-21.12.0.0.0-1.x86_64     1/1 
+
+Installed:
+  oracle-instantclient-basic-21.12.0.0.0-1.x86_64                            
+
+Complete!
+```
+
+Then config ld.so
+
+```
+[vagrant@mtk-epas vagrant]$ echo "/usr/lib/oracle/21/client64/lib" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
+/usr/lib/oracle/21/client64/lib
+[vagrant@mtk-epas vagrant]$ sudo ldconfig
+[vagrant@mtk-epas vagrant]$ ldconfig -p | grep libclntsh
+	libclntshcore.so.21.1 (libc6,x86-64) => /usr/lib/oracle/21/client64/lib/libclntshcore.so.21.1
+	libclntshcore.so (libc6,x86-64) => /usr/lib/oracle/21/client64/lib/libclntshcore.so
+	libclntsh.so.21.1 (libc6,x86-64) => /usr/lib/oracle/21/client64/lib/libclntsh.so.21.1
+	libclntsh.so (libc6,x86-64) => /usr/lib/oracle/21/client64/lib/libclntsh.so
+```
+Restart EPAS
+```
+[vagrant@mtk-epas vagrant]$ sudo -u enterprisedb /usr/edb/as17/bin/pg_ctl -D "/var/lib/edb/as17/data" -w restart
+waiting for server to shut down.... done
+server stopped
+waiting for server to start....2026-02-18 20:51:10 UTC LOG:  directory "edb_wait_states" already exists
+2026-02-18 20:51:10 UTC LOG:  edb_pg_tuner: total memory is set as 2050637824
+2026-02-18 20:51:10 UTC LOG:  redirecting log output to logging collector process
+2026-02-18 20:51:10 UTC HINT:  Future log output will appear in directory "log".
+ done
+server started
+```
+
+Create a DBLinks on EPAS referencing Oracle source table
+
+```
+[vagrant@mtk-epas vagrant]$ psql -h localhost -U dba -d edb
+Password for user dba: 
+psql (17.8.0)
+Type "help" for help.
+
+edb=# \dt
+          List of relations
+ Schema |    Name     | Type  | Owner 
+--------+-------------+-------+-------
+ demo   | customers   | table | dba
+ demo   | order_lines | table | dba
+ demo   | orders      | table | dba
+ demo   | products    | table | dba
+ demo   | ratings     | table | dba
+(5 rows)
+
+edb=# CREATE DATABASE LINK oralink
+  CONNECT TO demo IDENTIFIED BY 'demo'
+  USING '//192.168.56.14:1521/XEPDB1';
+CREATE DATABASE LINK
+edb=# SELECT * FROM ref_status@oralink;
+ status_code |   label    | is_active |     created_at     
+-------------+------------+-----------+--------------------
+ NEW         | New Order  | Y         | 18-FEB-26 20:29:20
+ PROC        | Processing | Y         | 18-FEB-26 20:29:20
+ SHIP        | Shipped    | Y         | 18-FEB-26 20:29:20
+ CANCEL      | Cancelled  | Y         | 18-FEB-26 20:29:20
+(4 rows)
+```
+ Create a synonym
+```
+edb=# CREATE SYNONYM ref_status FOR ref_status@oralink;
+CREATE SYNONYM
+
+
+edb=# select * from ref_status;
+ status_code |   label    | is_active |     created_at     
+-------------+------------+-----------+--------------------
+ NEW         | New Order  | Y         | 18-FEB-26 20:29:20
+ PROC        | Processing | Y         | 18-FEB-26 20:29:20
+ SHIP        | Shipped    | Y         | 18-FEB-26 20:29:20
+ CANCEL      | Cancelled  | Y         | 18-FEB-26 20:29:20
+(4 rows)
+
+edb=# 
+
+```
+
+Enjoy

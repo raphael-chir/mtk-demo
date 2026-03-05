@@ -32,6 +32,18 @@ cells:
     languageId: markdown
   - kind: 2
     value: >
+      BEGIN
+        DBMS_STATS.GATHER_SCHEMA_STATS(
+          ownname => USER,
+          estimate_percent => DBMS_STATS.AUTO_SAMPLE_SIZE,
+          method_opt => 'FOR ALL COLUMNS SIZE AUTO',
+          cascade => TRUE
+        );
+      END;
+
+      /
+
+
       SELECT 
           t.table_name,
           t.num_rows AS estimated_rows,

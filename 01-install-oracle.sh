@@ -12,9 +12,15 @@ fi
 dnf -y localinstall /vagrant/oracle-database-xe-21c-1.0-1.ol8.x86_64.rpm
 
 echo "hostname configuration"
-sed -i '/oracle-xe/d' /etc/hosts
-IP_VM=$(hostname -I | awk '{print $1}')
-echo "$IP_VM oracle-xe" >> /etc/hosts
+HN="$(hostname)"
+IP_VM="$(ip -4 addr show | awk '/192\.168\.56\./ {print $2}' | cut -d/ -f1 | head -n1)"
+if [ -z "$IP_VM" ]; then
+  echo "ERROR: could not find 192.168.56.x IP (network not ready?)"
+  ip -4 a
+  exit 1
+fi
+sed -i -E "/\s${HN}(\s|$)/d" /etc/hosts
+echo "$IP_VM $HN" >> /etc/hosts
 
 echo "SYS and SYSTEM password for Oracle (oracle/oracle)"
 ( echo "oracle"; echo "oracle" ) | /etc/init.d/oracle-xe-21c configure

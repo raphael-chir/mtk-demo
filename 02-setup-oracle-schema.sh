@@ -73,13 +73,3 @@ SQL
 
 echo "==> Schema and directory ready"
 
-# Launch the import
-impdp $SCHEMA_USER/$SCHEMA_PASS@localhost/$PDB \
-    DIRECTORY=dpump_dir \
-    DUMPFILE=demo_schema.dmp \
-    LOGFILE=demo_schema_import.log \
-    SCHEMAS=$SCHEMA_USER \
-    TABLE_EXISTS_ACTION=REPLACE
-
-echo "==> Import completed!"
-
